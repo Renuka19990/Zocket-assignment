@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { Component } from "react";
 import { LuImagePlus } from "react-icons/lu";
 
 const templateData = {
@@ -36,65 +36,86 @@ const templateData = {
   background_color: "#0369A1",
 };
 const defaultImageUrl =
-  "https://wallpapers.com/images/featured/kfc-gxi9z9gm4o78gsh7.jpg";
-function CanvasEditor() {
-  const canvasRef = useRef(null);
-  const [caption, setCaption] = useState(templateData.caption.text);
-  const [cta, setCta] = useState(templateData.cta.text);
-  const [background, setBackground] = useState(templateData.background_color);
-  const [image, setImage] = useState(new Image());
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [maskImage, setMaskImage] = useState(new Image());
-  const [maskStrokeImage, setMaskStrokeImage] = useState(new Image());
-  const [recentColors, setRecentColors] = useState([]);
-  const [showColorPicker, setShowColorPicker] = useState(false);
+  "https://img.freepik.com/premium-photo/illustration-cup-hot-chocolate-with-blurry-environment-creating-cozy-atmosphere-generative-ai_1062399-718.jpg?w=740";
 
-  useEffect(() => {
+class CanvasEditor extends Component {
+  constructor(props) {
+    super(props);
+    this.canvasRef = React.createRef();
+    this.state = {
+      caption: templateData.caption.text,
+      cta: templateData.cta.text,
+      background: templateData.background_color,
+      image: new Image(),
+      uploadedImage: null,
+      maskImage: new Image(),
+      maskStrokeImage: new Image(),
+      design_pattern: new Image(),
+      recentColors: [],
+      showColorPicker: false,
+    };
+  }
+
+  componentDidMount() {
+    const { image, maskImage, maskStrokeImage } = this.state;
     image.src = templateData.urls.design_pattern;
     image.onload = () => {
-      drawCanvas();
+      this.drawCanvas();
     };
 
     const defaultImage = new Image();
     defaultImage.src = defaultImageUrl;
     defaultImage.onload = () => {
-      setUploadedImage(defaultImage);
+      this.setState({ uploadedImage: defaultImage });
     };
+
     maskImage.src = templateData.urls.mask;
     maskImage.onload = () => {
-      drawCanvas();
+      this.drawCanvas();
     };
 
     maskStrokeImage.src = templateData.urls.stroke;
     maskStrokeImage.onload = () => {
-      drawCanvas();
+      this.drawCanvas();
     };
-  }, []);
+  }
 
-  useEffect(() => {
-    drawCanvas();
-  }, [caption, cta, background, uploadedImage]);
+  componentDidUpdate() {
+    this.drawCanvas();
+  }
 
-  const drawCanvas = () => {
-    const canvas = canvasRef.current;
+  drawCanvas() {
+    const canvas = this.canvasRef.current;
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const {
+      caption,
+      cta,
+      background,
+      image,
+      uploadedImage,
+      maskImage,
+      maskStrokeImage,
+      design_pattern,
+    } = this.state;
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //Background color
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-
+    //design pattern
     ctx.drawImage(
-      maskImage,
+      design_pattern,
       templateData.image_mask.x,
       templateData.image_mask.y,
       templateData.image_mask.width,
       templateData.image_mask.height
     );
+    //mask
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
     ctx.drawImage(
-      maskStrokeImage,
+      maskImage,
       templateData.image_mask.x,
       templateData.image_mask.y,
       templateData.image_mask.width,
@@ -110,28 +131,34 @@ function CanvasEditor() {
         templateData.image_mask.height
       );
     }
+    //mask stroke
 
+    ctx.drawImage(maskStrokeImage, 0, 10, 1080, 1070);
+
+    //texts
     ctx.fillStyle = templateData.caption.text_color;
     ctx.font = `${templateData.caption.font_size}px Arial`;
-    wrapText(ctx, caption, 500, 200, 970, templateData.caption.font_size);
+    this.wrapText(ctx, caption, 390, 140, 600, templateData.caption.font_size);
 
-    drawCTA(ctx);
-  };
+    this.drawCTA(ctx);
+  }
 
-  function drawCTA(ctx) {
-    const x = templateData.cta.position.x - templateData.cta.padding;
-    const y = templateData.cta.position.y - templateData.cta.padding;
+  drawCTA(ctx) {
+    const { cta } = this.state;
+    const x = templateData.cta.position.x - templateData.cta.padding * 4;
+    const y = templateData.cta.position.y - templateData.cta.padding * 3.2;
     const width = templateData.cta.wrap_length + 2 * templateData.cta.padding;
     const height = templateData.cta.font_size + 2 * templateData.cta.padding;
 
     ctx.fillStyle = templateData.cta.background_color;
-    roundRect(
+    this.roundRect(
       ctx,
-      x,
-      y,
+      90,
+      240,
       width,
       height,
       templateData.cta.border_radius,
+
       true,
       false
     );
@@ -143,7 +170,7 @@ function CanvasEditor() {
     ctx.fillText(cta, x + width / 2, y + height / 2);
   }
 
-  function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+  roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + width, y, x + width, y + height, radius);
@@ -155,28 +182,28 @@ function CanvasEditor() {
     if (stroke) ctx.stroke();
   }
 
-  function handleImageUpload(event) {
+  handleImageUpload(event) {
     const file = event.target.files[0];
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        setUploadedImage(img);
+        this.setState({ uploadedImage: img });
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
 
-  function handleColorChange(color) {
-    setBackground(color);
-    setRecentColors((prevColors) => [
-      ...new Set([color, ...prevColors].slice(0, 5)),
-    ]);
-    setShowColorPicker(false);
+  handleColorChange(color) {
+    this.setState({
+      background: color,
+      recentColors: [color, ...this.state.recentColors.slice(0, 4)],
+      showColorPicker: false,
+    });
   }
 
-  function wrapText(context, text, x, y, maxWidth, lineHeight) {
+  wrapText(context, text, x, y, maxWidth, lineHeight) {
     let words = text.split(" ");
     let line = "";
     for (let n = 0; n < words.length; n++) {
@@ -194,95 +221,101 @@ function CanvasEditor() {
     context.fillText(line, x, y);
   }
 
-  return (
-    <div className="flex justify-around flex-wrap md:flex-nowrap bg-white rounded-lg shadow-lg p-4">
-      <canvas
-        ref={canvasRef}
-        width={1080}
-        height={1080}
-        style={{ width: "400px", height: "400px" }}
-      ></canvas>
-      <div className="w-full md:w-1/2 p-4 space-y-4">
-        <h1 className="font-bold text-center text-[32px]">Ad Customization</h1>
-        <p className="text-center text-gray-400 text-[22px] mb-[50px]">
-          Customize your ad and get the templates accordingly
-        </p>
-        <div>
-          <label
-            htmlFor="imageUpload"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Upload Image
-          </label>
-          <div className="mt-1 block w-full">
-            <label
-              className="flex gap-5 items-center p-2 border border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50"
-              htmlFor="imageUpload"
-            >
-              <LuImagePlus />
-              <span className="block text-sm text-gray-900">
-                Change the ad Creative image
-              </span>
-              <p className="text-blue-500 underline">Select File</p>
-            </label>
-            <input
-              id="imageUpload"
-              type="file"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-          </div>
+  render() {
+    const { caption, cta, recentColors, showColorPicker, background } =
+      this.state;
+    return (
+      <div className="flex justify-around flex-wrap md:flex-nowrap bg-white rounded-lg shadow-lg p-4">
+        <canvas
+          ref={this.canvasRef}
+          width={1080}
+          height={1080}
+          style={{ width: "400px", height: "400px" }}
+        ></canvas>
+        <div className="w-full md:w-1/2 p-4 space-y-4">
+          <h1 className="font-bold text-center text-[32px]">
+            Ad Customization
+          </h1>
+          <p className="text-center text-gray-400 text-[22px] mb-[50px]">
+            Customize your ad and get the templates accordingly
+          </p>
           <div>
-            <div className="items-center p-2 border mt-4 border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50">
-              {" "}
-              <input
-                type="text"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-              />
-            </div>
-
-            <div className="items-center p-2 border mt-4 border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50">
-              {" "}
-              <input
-                type="text"
-                value={cta}
-                onChange={(e) => setCta(e.target.value)}
-              />
-            </div>
-            <div className="mt-4">
-              {recentColors.map((color) => (
-                <button
-                  key={color}
-                  style={{
-                    backgroundColor: color,
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "50%",
-                    margin: "2px",
-                  }}
-                  onClick={() => setBackground(color)}
-                />
-              ))}
-              <button
-                className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-lg font-medium leading-none text-gray-600 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                onClick={() => setShowColorPicker(true)}
+            <label
+              htmlFor="imageUpload"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Upload Image
+            </label>
+            <div className="mt-1 block w-full">
+              <label
+                className="flex gap-5 items-center p-2 border border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50"
+                htmlFor="imageUpload"
               >
-                +
-              </button>
-              {showColorPicker && (
+                <LuImagePlus />
+                <span className="block text-sm text-gray-900">
+                  Change the ad Creative image
+                </span>
+                <p className="text-blue-500 underline">Select File</p>
+              </label>
+              <input
+                id="imageUpload"
+                type="file"
+                className="hidden"
+                onChange={this.handleImageUpload.bind(this)}
+              />
+            </div>
+            <div>
+              <div className="items-center p-2 border mt-4 border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50">
+                {" "}
                 <input
-                  type="color"
-                  value={background}
-                  onChange={(e) => handleColorChange(e.target.value)}
+                  type="text"
+                  value={caption}
+                  onChange={(e) => this.setState({ caption: e.target.value })}
                 />
-              )}
+              </div>
+
+              <div className="items-center p-2 border mt-4 border-gray-300 rounded-md shadow-sm cursor-pointer hover:bg-gray-50">
+                {" "}
+                <input
+                  type="text"
+                  value={cta}
+                  onChange={(e) => this.setState({ cta: e.target.value })}
+                />
+              </div>
+              <div className="mt-4">
+                {recentColors.map((color) => (
+                  <button
+                    key={color}
+                    style={{
+                      backgroundColor: color,
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      margin: "2px",
+                    }}
+                    onClick={() => this.setState({ background: color })}
+                  />
+                ))}
+                <button
+                  className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-lg font-medium leading-none text-gray-600 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onClick={() => this.setState({ showColorPicker: true })}
+                >
+                  +
+                </button>
+                {showColorPicker && (
+                  <input
+                    type="color"
+                    value={background}
+                    onChange={(e) => this.handleColorChange(e.target.value)}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
 
 export default CanvasEditor;
